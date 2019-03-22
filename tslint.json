@@ -1,0 +1,16 @@
+{
+    "extends": [
+        "tslint:recommended",
+        "tslint-config-prettier"
+    ],
+    "rules": {
+        "curly": false,
+        "interface-name": false,
+        "no-conditional-assignment": false,
+        "object-literal-sort-keys": false,
+        "member-access": false,
+        "member-ordering": false,
+        "variable-name": false,
+        "prefer-for-of": false
+    }
+}
