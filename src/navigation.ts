@@ -1,11 +1,11 @@
 export enum KeyboardKeys {
-  TAB_KEY = "Tab",
-  ARROW_UP_KEY = "ArrowUp",
-  ARROW_KEY_RIGHT = "ArrowRight",
-  ARROW_KEY_DOWN = "ArrowDown",
-  ARROW_KEY_LEFT = "ArrowLeft",
-  ENTER_KEY = "Enter",
-  SPACE_KEY = "Space"
+  TAB_KEY = 'Tab',
+  ARROW_UP_KEY = 'ArrowUp',
+  ARROW_KEY_RIGHT = 'ArrowRight',
+  ARROW_KEY_DOWN = 'ArrowDown',
+  ARROW_KEY_LEFT = 'ArrowLeft',
+  ENTER_KEY = 'Enter',
+  SPACE_KEY = 'Space',
 }
 
 export enum ElementType {
@@ -15,7 +15,7 @@ export enum ElementType {
   MODAL,
   TABLIST,
   TAB,
-  LABEL
+  LABEL,
 }
 
 export interface Attribute {
@@ -24,8 +24,8 @@ export interface Attribute {
 }
 
 export enum ClickActions {
-  CLICK = "click",
-  FOCUS = "focus"
+  CLICK = 'click',
+  FOCUS = 'focus',
 }
 
 export interface OnClick {
@@ -58,8 +58,21 @@ export interface ElementList {
   attributes?: Attribute[];
 }
 
+export interface Route {
+  path: string;
+  elements: ElementList[];
+}
+
+export interface Navigation {
+  general: {
+    header: ElementList[];
+    footer: ElementList[];
+  };
+  routes: Route[];
+}
+
 export class KeyboardNavigation {
-  private config: any;
+  private config: Navigation;
   private routes: RouteConfig;
   private currentIndex = 0;
   private previousIndex = 0;
@@ -68,9 +81,9 @@ export class KeyboardNavigation {
   private listItems: HTMLElement[] = [];
   private currentIndexList = -1;
   private givenId: ElementList[];
-  private onFocusClass = "onFocus";
-  private simulateFocusClass = "simulate-focus";
-  private disabledClass = "disabled-element";
+  private onFocusClass = 'onFocus';
+  private simulateFocusClass = 'simulate-focus';
+  private disabledClass = 'disabled-element';
   private keyBinded = false;
   private onNavigation = false;
 
@@ -87,23 +100,18 @@ export class KeyboardNavigation {
     if (dClass) this.disabledClass = dClass;
 
     this.config = data;
-    document.addEventListener("mousedown", this.resetNavigation.bind(this));
-    document.addEventListener("keydown", this.listenKeyDown.bind(this));
+    document.addEventListener('mousedown', this.resetNavigation.bind(this));
+    document.addEventListener('keydown', this.listenKeyDown.bind(this));
     this.keyBinded = true;
     this.setStyle();
   }
 
   public onChangeRoute(routeName: string) {
-    let key;
-    if (
-      !(key = Object.keys(this.config.routes).find(k => k === routeName)) &&
-      !this.keyBinded
-    )
-      return this.reset();
-    if (!this.keyBinded)
-      document.addEventListener("keydown", this.listenKeyDown.bind(this));
+    let route: Route;
+    if (!(route = this.config.routes.find(r => r.path === routeName)) && !this.keyBinded) return this.reset();
+    if (!this.keyBinded) document.addEventListener('keydown', this.listenKeyDown.bind(this));
     this.givenId = this.config.general.header
-      .concat(this.config.routes[key])
+      .concat(route.elements)
       .concat(this.config.general.footer)
       .filter(e => !!e);
     this.setStyle();
@@ -111,24 +119,20 @@ export class KeyboardNavigation {
       attributes: false,
       childList: true,
       characterData: false,
-      subtree: true
+      subtree: true,
     });
     document.body.addEventListener(
-      "focus",
+      'focus',
       event => {
         if (this.navInlist) return this.updateNavInList(false);
         let index;
-        if (
-          (index = this.foundElems.findIndex(e => e.elem === event.target)) ===
-          -1
-        )
-          return;
-        this.checkFocusStyle(this.currentIndex, "remove");
+        if ((index = this.foundElems.findIndex(e => e.elem === event.target)) === -1) return;
+        this.checkFocusStyle(this.currentIndex, 'remove');
         this.currentIndex = index;
         this.currentType = this.foundElems[index].type;
-        this.checkFocusStyle(this.currentIndex, "add");
+        this.checkFocusStyle(this.currentIndex, 'add');
       },
-      true
+      true,
     );
   }
 
@@ -140,12 +144,8 @@ export class KeyboardNavigation {
           document.body.contains(document.getElementById(elem.id))
         ) {
           if (elem.elemToStyle)
-            return document
-              .getElementById(elem.elemToStyle)
-              .classList.remove(this.simulateFocusClass);
-          return document
-            .getElementById(elem.id)
-            .classList.remove(this.onFocusClass);
+            return document.getElementById(elem.elemToStyle).classList.remove(this.simulateFocusClass);
+          return document.getElementById(elem.id).classList.remove(this.onFocusClass);
         }
       });
   }
@@ -160,7 +160,7 @@ export class KeyboardNavigation {
     this.givenId = [];
     this.keyBinded = false;
     this.foundElems = [];
-    document.removeEventListener("keydown", this.listenKeyDown.bind(this));
+    document.removeEventListener('keydown', this.listenKeyDown.bind(this));
   }
 
   private resetNavigation() {
@@ -171,25 +171,16 @@ export class KeyboardNavigation {
   private checkFocusStyle(id: number, call: string) {
     const entry = this.foundElems[id];
     if (!entry) return;
-    const otherElements = this.foundElems.filter(
-      f => f.elemToStyle && f.id !== entry.id
-    );
-    if (entry && entry.elemToStyle)
-      document
-        .getElementById(entry.elemToStyle)
-        .classList[call](this.simulateFocusClass);
-    otherElements.map(e =>
-      document
-        .getElementById(e.elemToStyle)
-        .classList.remove(this.simulateFocusClass)
-    );
+    const otherElements = this.foundElems.filter(f => f.elemToStyle && f.id !== entry.id);
+    if (entry && entry.elemToStyle) document.getElementById(entry.elemToStyle).classList[call](this.simulateFocusClass);
+    otherElements.map(e => document.getElementById(e.elemToStyle).classList.remove(this.simulateFocusClass));
   }
 
   // Remove focus style for non-interactive elements
   private setStyle() {
-    const style = document.createElement("style");
-    style.type = "text/css";
-    style.innerHTML = "* { outline: none; }";
+    const style = document.createElement('style');
+    style.type = 'text/css';
+    style.innerHTML = '* { outline: none; }';
     document.body.appendChild(style);
   }
 
@@ -206,10 +197,7 @@ export class KeyboardNavigation {
     }
     if (
       (modal = this.givenId.find(
-        e =>
-          e.type === ElementType.MODAL &&
-          e.modalElements &&
-          document.body.contains(document.getElementById(e.id))
+        e => e.type === ElementType.MODAL && e.modalElements && document.body.contains(document.getElementById(e.id)),
       ))
     ) {
       newArray = this.searchForElements(modal.modalElements);
@@ -217,9 +205,7 @@ export class KeyboardNavigation {
       newArray = this.searchForElements(this.givenId);
     }
 
-    this.updateFoundElems(
-      newArray.filter(e => !!e && e.type !== ElementType.TABLIST)
-    );
+    this.updateFoundElems(newArray.filter(e => !!e && e.type !== ElementType.TABLIST));
   }
 
   searchForElements(array: ElementList[]): InteractableElement[] {
@@ -227,31 +213,19 @@ export class KeyboardNavigation {
     array.map(element => {
       const elem = document.getElementById(element.id);
       if (document.body.contains(elem)) {
-        if (element.attributes)
-          element.attributes.map(e => elem.setAttribute(e.name, e.value));
+        if (element.attributes) element.attributes.map(e => elem.setAttribute(e.name, e.value));
         if (element.type === ElementType.TABLIST) {
           let tabNumber = 0;
           let tab: HTMLElement;
-          let id = "";
-          document.getElementById(element.id).setAttribute("role", "tablist");
-          while (
-            document.body.contains(
-              (tab = document.getElementById(
-                (id = `${element.id}-${++tabNumber}`)
-              ))
-            )
-          ) {
+          let id = '';
+          document.getElementById(element.id).setAttribute('role', 'tablist');
+          while (document.body.contains((tab = document.getElementById((id = `${element.id}-${++tabNumber}`))))) {
             const tabElement = element.tabElements[tabNumber - 1];
-            tab.setAttribute("aria-controls", tabElement);
+            tab.setAttribute('aria-controls', tabElement);
             const htmlElement = document.getElementById(tabElement);
-            if (htmlElement) htmlElement.setAttribute("aria-labelledby", id);
-            tab.setAttribute("role", "tab");
-            newArray.push(
-              this.createInteractableObject(
-                { ...element, id, type: ElementType.TAB },
-                tab
-              )
-            );
+            if (htmlElement) htmlElement.setAttribute('aria-labelledby', id);
+            tab.setAttribute('role', 'tab');
+            newArray.push(this.createInteractableObject({ ...element, id, type: ElementType.TAB }, tab));
           }
           return;
         }
@@ -267,7 +241,7 @@ export class KeyboardNavigation {
       ...element,
       elem,
       x: rect.left,
-      y: rect.top
+      y: rect.top,
     } as InteractableElement;
   }
 
@@ -286,16 +260,12 @@ export class KeyboardNavigation {
       if (this.foundElems.length === 0) return;
       const currentList = this.foundElems[this.currentIndex];
       if (currentList.elemToStyle)
-        document
-          .getElementById(currentList.elemToStyle)
-          .classList.add(this.simulateFocusClass);
+        document.getElementById(currentList.elemToStyle).classList.add(this.simulateFocusClass);
       else {
         currentList.elem.classList.add(this.onFocusClass);
         currentList.elem.focus();
       }
-      this.listItems[this.currentIndexList].classList.remove(
-        this.simulateFocusClass
-      );
+      this.listItems[this.currentIndexList].classList.remove(this.simulateFocusClass);
       this.currentIndexList = -1;
       return (this.listItems = []);
     }
@@ -305,38 +275,29 @@ export class KeyboardNavigation {
       let givenElem: InteractableElement;
       while (
         document.body.contains(
-          (elem = document.getElementById(
-            `${(givenElem = this.foundElems[this.currentIndex]).id}-${i++}`
-          ))
+          (elem = document.getElementById(`${(givenElem = this.foundElems[this.currentIndex]).id}-${i++}`)),
         )
       ) {
-        elem.setAttribute(
-          "aria-activedescendant",
-          this.foundElems[this.currentIndex].id
-        );
-        elem.setAttribute("role", "listitem");
+        elem.setAttribute('aria-activedescendant', this.foundElems[this.currentIndex].id);
+        elem.setAttribute('role', 'listitem');
         this.listItems.push(elem);
       }
       const currentList = this.foundElems[this.currentIndex];
       if (currentList.elemToStyle)
-        document
-          .getElementById(currentList.elemToStyle)
-          .classList.remove(this.simulateFocusClass);
+        document.getElementById(currentList.elemToStyle).classList.remove(this.simulateFocusClass);
       else currentList.elem.classList.remove(this.onFocusClass);
     }
   }
 
   private initElems() {
-    const allElem = document.getElementsByTagName("*");
+    const allElem = document.getElementsByTagName('*');
     let number = 1;
 
-    for (let i = 0; i < allElem.length; i++)
-      allElem[i].setAttribute("tabindex", "-1");
+    for (let i = 0; i < allElem.length; i++) allElem[i].setAttribute('tabindex', '-1');
 
     this.foundElems.map(e => {
-      if (e.type !== ElementType.INPUT)
-        if (!e.elemToStyle) e.elem.classList.add(this.onFocusClass);
-      e.elem.setAttribute("tabindex", number.toString());
+      if (e.type !== ElementType.INPUT) if (!e.elemToStyle) e.elem.classList.add(this.onFocusClass);
+      e.elem.setAttribute('tabindex', number.toString());
       this.addBasicAttributes(e);
       ++number;
     });
@@ -346,16 +307,16 @@ export class KeyboardNavigation {
     const htmlElement = document.getElementById(elem.id);
     switch (elem.type) {
       case ElementType.INPUT:
-        htmlElement.setAttribute("role", "text");
+        htmlElement.setAttribute('role', 'text');
         break;
       case ElementType.BUTTON:
-        htmlElement.setAttribute("role", "button");
+        htmlElement.setAttribute('role', 'button');
         break;
       case ElementType.MODAL:
-        htmlElement.setAttribute("role", "dialog");
+        htmlElement.setAttribute('role', 'dialog');
         break;
       case ElementType.LIST:
-        htmlElement.setAttribute("role", "list");
+        htmlElement.setAttribute('role', 'list');
         break;
       default:
         break;
@@ -378,20 +339,16 @@ export class KeyboardNavigation {
         this.previousIndex = this.currentIndex;
         // To be sure that this piece of code will be executed after the onFocus event
         setTimeout(() => {
-          if (
-            this.foundElems[this.previousIndex] &&
-            this.foundElems[this.previousIndex].type === ElementType.LIST
-          )
+          if (this.foundElems[this.previousIndex] && this.foundElems[this.previousIndex].type === ElementType.LIST)
             return;
           let elemToStyle;
           if (
             this.foundElems.length > 0 &&
-            (this.currentIndex + 1 === this.foundElems.length ||
-              this.currentIndex - 1 === -1) &&
+            (this.currentIndex + 1 === this.foundElems.length || this.currentIndex - 1 === -1) &&
             this.currentIndex === this.previousIndex &&
             (elemToStyle = this.foundElems[this.currentIndex].elemToStyle)
           )
-            this.checkFocusStyle(this.currentIndex, "remove");
+            this.checkFocusStyle(this.currentIndex, 'remove');
         }, 1);
         break;
       case KeyboardKeys.ARROW_KEY_DOWN:
@@ -423,21 +380,12 @@ export class KeyboardNavigation {
       if (this.navInlist && !element.classList.contains(this.disabledClass)) {
         element.click();
         this.foundElems[
-          this.currentIndex + 1 === this.foundElems.length
-            ? --this.currentIndex
-            : ++this.currentIndex
+          this.currentIndex + 1 === this.foundElems.length ? --this.currentIndex : ++this.currentIndex
         ].elem.focus();
       }
     } else if (entry.type === ElementType.TAB) {
-      const tabList = this.givenId.find(
-        i => i.id === entry.id.substring(0, entry.id.lastIndexOf("-"))
-      );
-      const id =
-        tabList.tabElements[
-          Number(
-            entry.id.substring(entry.id.lastIndexOf("-") + 1, entry.id.length)
-          ) - 1
-        ];
+      const tabList = this.givenId.find(i => i.id === entry.id.substring(0, entry.id.lastIndexOf('-')));
+      const id = tabList.tabElements[Number(entry.id.substring(entry.id.lastIndexOf('-') + 1, entry.id.length)) - 1];
       entry.elem.click();
       if (entry.onClick && entry.onClick.length > 0)
         setTimeout(() => {
@@ -457,30 +405,20 @@ export class KeyboardNavigation {
   private checkForNextItem() {
     if (this.listItems.length === 0) return;
     if (this.currentIndexList > -1 && this.listItems[this.currentIndexList])
-      this.listItems[this.currentIndexList].classList.remove(
-        this.simulateFocusClass
-      );
-    if (this.currentIndexList + 1 === this.listItems.length)
-      this.currentIndexList = 0;
+      this.listItems[this.currentIndexList].classList.remove(this.simulateFocusClass);
+    if (this.currentIndexList + 1 === this.listItems.length) this.currentIndexList = 0;
     else ++this.currentIndexList;
     this.listItems[this.currentIndexList].scrollIntoView(false);
-    this.listItems[this.currentIndexList].classList.add(
-      this.simulateFocusClass
-    );
+    this.listItems[this.currentIndexList].classList.add(this.simulateFocusClass);
   }
 
   private checkForPrevItem() {
     if (this.listItems.length === 0) return;
     if (this.currentIndexList > -1 && this.listItems[this.currentIndexList])
-      this.listItems[this.currentIndexList].classList.remove(
-        this.simulateFocusClass
-      );
-    if (this.currentIndexList - 1 < 0)
-      this.currentIndexList = this.listItems.length - 1;
+      this.listItems[this.currentIndexList].classList.remove(this.simulateFocusClass);
+    if (this.currentIndexList - 1 < 0) this.currentIndexList = this.listItems.length - 1;
     else --this.currentIndexList;
     this.listItems[this.currentIndexList].scrollIntoView(false);
-    this.listItems[this.currentIndexList].classList.add(
-      this.simulateFocusClass
-    );
+    this.listItems[this.currentIndexList].classList.add(this.simulateFocusClass);
   }
 }
