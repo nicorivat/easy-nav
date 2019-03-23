@@ -1,7 +1,6 @@
 {
   "name": "easy-nav",
   "version": "1.0.0",
-  "description": "Make the keyboard navigation and accessibility great again",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -20,7 +19,7 @@
     "url": "git+https://github.com/nicorivat/easy-nav.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Nicolas RIVAT",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/nicorivat/easy-nav/issues"
