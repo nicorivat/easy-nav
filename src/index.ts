@@ -6,5 +6,5 @@ export {
   ElementType,
   InteractableElement,
   OnClick,
-  Attribute,
+  Attribute
 } from './navigation';

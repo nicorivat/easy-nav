@@ -23,14 +23,9 @@ export interface Attribute {
   value: string;
 }
 
-export enum ClickActions {
-  CLICK = 'click',
-  FOCUS = 'focus',
-}
-
 export interface OnClick {
   id: string;
-  action: ClickActions;
+  action: string;
 }
 
 export interface InteractableElement {
@@ -71,9 +66,9 @@ export interface Navigation {
   routes: Route[];
 }
 
+// TODO work on Tablist element - refacto
 export class KeyboardNavigation {
   private config: Navigation;
-  private routes: RouteConfig;
   private currentIndex = 0;
   private previousIndex = 0;
   private currentType: ElementType;
@@ -107,13 +102,21 @@ export class KeyboardNavigation {
   }
 
   public onChangeRoute(routeName: string) {
-    let route: Route;
-    if (!(route = this.config.routes.find(r => r.path === routeName)) && !this.keyBinded) return this.reset();
+    const route: Route = this.config.routes.find(r => r.path === routeName);
+    if (!route) {
+      if (this.config.general.header.length > 0) this.givenId = this.config.general.header;
+      if (this.config.general.footer.length > 0) this.givenId = [...this.givenId, ...this.config.general.footer];
+      if (this.givenId.length === 0) return this.reset();
+    } else
+      this.givenId = this.config.general.header
+        .concat(route.elements)
+        .concat(this.config.general.footer)
+        .filter(e => !!e);
     if (!this.keyBinded) document.addEventListener('keydown', this.listenKeyDown.bind(this));
-    this.givenId = this.config.general.header
-      .concat(route.elements)
-      .concat(this.config.general.footer)
-      .filter(e => !!e);
+    this.setEvents();
+  }
+
+  private setEvents() {
     this.setStyle();
     this.mutationObserver.observe(document.body, {
       attributes: false,
@@ -220,11 +223,13 @@ export class KeyboardNavigation {
           let id = '';
           document.getElementById(element.id).setAttribute('role', 'tablist');
           while (document.body.contains((tab = document.getElementById((id = `${element.id}-${++tabNumber}`))))) {
-            const tabElement = element.tabElements[tabNumber - 1];
-            tab.setAttribute('aria-controls', tabElement);
-            const htmlElement = document.getElementById(tabElement);
-            if (htmlElement) htmlElement.setAttribute('aria-labelledby', id);
-            tab.setAttribute('role', 'tab');
+            if (element.tabElements && element.tabElements.length > 0) {
+              const tabElement = element.tabElements[tabNumber - 1];
+              tab.setAttribute('aria-controls', tabElement);
+              const htmlElement = document.getElementById(tabElement);
+              if (htmlElement) htmlElement.setAttribute('aria-labelledby', id);
+              tab.setAttribute('role', 'tab');
+            }
             newArray.push(this.createInteractableObject({ ...element, id, type: ElementType.TAB }, tab));
           }
           return;
@@ -385,6 +390,7 @@ export class KeyboardNavigation {
       }
     } else if (entry.type === ElementType.TAB) {
       const tabList = this.givenId.find(i => i.id === entry.id.substring(0, entry.id.lastIndexOf('-')));
+      if (!tabList.tabElements || tabList.tabElements.length === 0) return entry.elem.click();
       const id = tabList.tabElements[Number(entry.id.substring(entry.id.lastIndexOf('-') + 1, entry.id.length)) - 1];
       entry.elem.click();
       if (entry.onClick && entry.onClick.length > 0)
