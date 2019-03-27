@@ -47,7 +47,7 @@ export interface ElementList {
   id: string;
   type: ElementType;
   elemToStyle?: string;
-  modalElements?: InteractableElement[];
+  modalElements?: ElementList[];
   tabElements?: string[];
   onClick?: OnClick[];
   attributes?: Attribute[];
