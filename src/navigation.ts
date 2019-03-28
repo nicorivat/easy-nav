@@ -264,6 +264,7 @@ export class KeyboardNavigation {
     if (!isNav) {
       if (this.foundElems.length === 0) return;
       const currentList = this.foundElems[this.currentIndex];
+      if (!currentList) return (this.navInList = false);
       if (currentList.elemToStyle)
         document.getElementById(currentList.elemToStyle).classList.add(this.simulateFocusClass);
       else {
