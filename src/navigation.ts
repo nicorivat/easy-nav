@@ -1,8 +1,6 @@
 export enum KeyboardKeys {
   TAB_KEY = 'Tab',
-  ARROW_UP_KEY = 'ArrowUp',
   ARROW_KEY_RIGHT = 'ArrowRight',
-  ARROW_KEY_DOWN = 'ArrowDown',
   ARROW_KEY_LEFT = 'ArrowLeft',
   ENTER_KEY = 'Enter',
   SPACE_KEY = 'Space',
@@ -46,6 +44,7 @@ export interface RouteConfig {
 export interface ElementList {
   id: string;
   type: ElementType;
+  itemType?: ElementType;
   elemToStyle?: string;
   modalElements?: ElementList[];
   tabElements?: string[];
@@ -193,7 +192,7 @@ export class KeyboardNavigation {
     if (this.givenId.length === 0) this.reset();
     if (
       JSON.stringify(this.foundElems) === JSON.stringify(this.givenId) &&
-      !this.givenId.find(e => e.type === ElementType.TABLIST)
+      !this.givenId.find(e => e.type === ElementType.TABLIST || e.type === ElementType.LIST)
     ) {
       newArray = this.foundElems.filter(e => document.body.contains(e.elem));
       return this.updateFoundElems(newArray);
@@ -208,7 +207,7 @@ export class KeyboardNavigation {
       newArray = this.searchForElements(this.givenId);
     }
 
-    this.updateFoundElems(newArray.filter(e => !!e && e.type !== ElementType.TABLIST));
+    this.updateFoundElems(newArray.filter(e => !!e && e.type !== ElementType.TABLIST && e.type !== ElementType.LIST));
   }
 
   searchForElements(array: ElementList[]): InteractableElement[] {
@@ -217,20 +216,27 @@ export class KeyboardNavigation {
       const elem = document.getElementById(element.id);
       if (document.body.contains(elem)) {
         if (element.attributes) element.attributes.map(e => elem.setAttribute(e.name, e.value));
-        if (element.type === ElementType.TABLIST) {
-          let tabNumber = 0;
-          let tab: HTMLElement;
+        if (element.type === ElementType.LIST || element.type === ElementType.TABLIST) {
+          let index = 0;
+          let child: HTMLElement;
           let id = '';
-          document.getElementById(element.id).setAttribute('role', 'tablist');
-          while (document.body.contains((tab = document.getElementById((id = `${element.id}-${++tabNumber}`))))) {
-            if (element.tabElements && element.tabElements.length > 0) {
-              const tabElement = element.tabElements[tabNumber - 1];
-              tab.setAttribute('aria-controls', tabElement);
+
+          const isList = element.type === ElementType.LIST;
+          const childType = isList ? element.itemType || ElementType.LABEL : ElementType.TAB;
+
+          document.getElementById(element.id).setAttribute('role', isList ? 'list' : 'tablist');
+
+          while (document.body.contains((child = document.getElementById((id = `${element.id}-${++index}`))))) {
+            if (isList) {
+              child.setAttribute('role', 'listitem');
+            } else if (element.tabElements && element.tabElements.length > 0) {
+              const tabElement = element.tabElements[index - 1];
+              child.setAttribute('aria-controls', tabElement);
               const htmlElement = document.getElementById(tabElement);
               if (htmlElement) htmlElement.setAttribute('aria-labelledby', id);
-              tab.setAttribute('role', 'tab');
+              child.setAttribute('role', 'tab');
             }
-            newArray.push(this.createInteractableObject({ ...element, id, type: ElementType.TAB }, tab));
+            newArray.push(this.createInteractableObject({ ...element, id, type: childType }, child));
           }
           return;
         }
@@ -345,8 +351,6 @@ export class KeyboardNavigation {
         this.previousIndex = this.currentIndex;
         // To be sure that this piece of code will be executed after the onFocus event
         setTimeout(() => {
-          if (this.foundElems[this.previousIndex] && this.foundElems[this.previousIndex].type === ElementType.LIST)
-            return;
           let elemToStyle;
           if (
             this.foundElems.length > 0 &&
@@ -356,20 +360,6 @@ export class KeyboardNavigation {
           )
             this.checkFocusStyle(this.currentIndex, 'remove');
         }, 1);
-        break;
-      case KeyboardKeys.ARROW_KEY_DOWN:
-        if (this.currentType === ElementType.LIST && this.onNavigation) {
-          event.preventDefault();
-          this.updateNavInList(true);
-          this.checkForNextItem();
-        }
-        break;
-      case KeyboardKeys.ARROW_UP_KEY:
-        if (this.currentType === ElementType.LIST && this.onNavigation) {
-          event.preventDefault();
-          this.updateNavInList(true);
-          this.checkForPrevItem();
-        }
         break;
       default:
         break;
@@ -381,15 +371,7 @@ export class KeyboardNavigation {
     if (!this.onNavigation) return;
     if (entry.elem.classList.contains(this.disabledClass)) return;
 
-    if (entry.type === ElementType.LIST) {
-      const element = this.listItems[this.currentIndexList];
-      if (this.navInlist && !element.classList.contains(this.disabledClass)) {
-        element.click();
-        this.foundElems[
-          this.currentIndex + 1 === this.foundElems.length ? --this.currentIndex : ++this.currentIndex
-        ].elem.focus();
-      }
-    } else if (entry.type === ElementType.TAB) {
+    if (entry.type === ElementType.TAB) {
       const tabList = this.givenId.find(i => i.id === entry.id.substring(0, entry.id.lastIndexOf('-')));
       if (!tabList.tabElements || tabList.tabElements.length === 0) return entry.elem.click();
       const id = tabList.tabElements[Number(entry.id.substring(entry.id.lastIndexOf('-') + 1, entry.id.length)) - 1];
@@ -407,25 +389,5 @@ export class KeyboardNavigation {
           entry.onClick.map(c => document.getElementById(c.id)[c.action]());
         }, 1);
     }
-  }
-
-  private checkForNextItem() {
-    if (this.listItems.length === 0) return;
-    if (this.currentIndexList > -1 && this.listItems[this.currentIndexList])
-      this.listItems[this.currentIndexList].classList.remove(this.simulateFocusClass);
-    if (this.currentIndexList + 1 === this.listItems.length) this.currentIndexList = 0;
-    else ++this.currentIndexList;
-    this.listItems[this.currentIndexList].scrollIntoView(false);
-    this.listItems[this.currentIndexList].classList.add(this.simulateFocusClass);
-  }
-
-  private checkForPrevItem() {
-    if (this.listItems.length === 0) return;
-    if (this.currentIndexList > -1 && this.listItems[this.currentIndexList])
-      this.listItems[this.currentIndexList].classList.remove(this.simulateFocusClass);
-    if (this.currentIndexList - 1 < 0) this.currentIndexList = this.listItems.length - 1;
-    else --this.currentIndexList;
-    this.listItems[this.currentIndexList].scrollIntoView(false);
-    this.listItems[this.currentIndexList].classList.add(this.simulateFocusClass);
   }
 }
