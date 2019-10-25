@@ -14,6 +14,7 @@ export enum ElementType {
   TABLIST,
   TAB,
   LABEL,
+  LINK
 }
 
 export interface Attribute {
@@ -330,6 +331,9 @@ export class KeyboardNavigation {
       case ElementType.LIST:
         htmlElement.setAttribute('role', 'list');
         break;
+      case ElementType.LINK:
+        htmlElement.setAttribute('role', 'link');
+        break;
       default:
         break;
     }
@@ -338,9 +342,13 @@ export class KeyboardNavigation {
   private listenKeyDown(event: any) {
     switch (event.key) {
       case KeyboardKeys.ENTER_KEY:
+        // évite le double click sur les links
+        event.preventDefaul();
         this.handleClick();
         break;
       case KeyboardKeys.SPACE_KEY:
+        // évite le double click sur les boutons
+        event.preventDefaul();
         this.handleClick();
         break;
       case KeyboardKeys.TAB_KEY:
