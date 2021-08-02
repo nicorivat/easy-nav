@@ -14,7 +14,7 @@ export enum ElementType {
   TABLIST,
   TAB,
   LABEL,
-  LINK
+  LINK,
 }
 
 export interface Attribute {
